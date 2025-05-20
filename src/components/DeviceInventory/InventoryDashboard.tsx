@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Grid3X3 } from "lucide-react";
 import AddDeviceForm from "./AddDeviceForm";
 import InventoryTable from "./InventoryTable";
 import DeviceDetails from "./DeviceDetails";
@@ -56,7 +56,7 @@ const InventoryDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <Link to="/rented-devices">
           <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
             <div className="font-bold">מכשירים בהשכרה</div>
@@ -79,6 +79,12 @@ const InventoryDashboard: React.FC = () => {
           <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
             <div className="font-bold">מכשירים לפיתוח</div>
             <div className="text-lg font-semibold text-amber-600">{stats.developmentDevices}</div>
+          </Button>
+        </Link>
+        <Link to="/devices-by-model">
+          <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
+            <div className="font-bold">סיכום לפי דגם</div>
+            <Grid3X3 className="mt-1 h-5 w-5 text-gray-600" />
           </Button>
         </Link>
       </div>
