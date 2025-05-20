@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { Device, DeviceModel, InventoryStats, RemovalReason } from "@/types/inventory";
+import { Device, DeviceModel, InventoryStats, RemovalReason, CustomerInfo } from "@/types/inventory";
 
 // Mock data for initial development
 const initialDevices: Device[] = [
@@ -12,6 +11,7 @@ const initialDevices: Device[] = [
     entryDate: new Date(2023, 1, 15),
     exitDate: null,
     removalReason: null,
+    customerInfo: null
   },
   {
     id: "2",
@@ -20,6 +20,13 @@ const initialDevices: Device[] = [
     entryDate: new Date(2023, 2, 10),
     exitDate: new Date(2023, 5, 20),
     removalReason: "rental",
+    customerInfo: {
+      name: "חברת אלפא",
+      terminalId: "TER-1234",
+      email: "alpha@example.com",
+      phone: "052-1234567",
+      accountCode: "ACC-001"
+    }
   },
   {
     id: "3",
@@ -28,6 +35,13 @@ const initialDevices: Device[] = [
     entryDate: new Date(2023, 3, 5),
     exitDate: new Date(2023, 7, 12),
     removalReason: "sale",
+    customerInfo: {
+      name: "חברת ביטא",
+      terminalId: "TER-5678",
+      email: "beta@example.com",
+      phone: "053-7654321",
+      accountCode: "ACC-002"
+    }
   },
 ];
 
@@ -102,6 +116,7 @@ export function useInventory() {
       entryDate,
       exitDate: null,
       removalReason: null,
+      customerInfo: null
     };
     
     setDevices(prev => [...prev, newDevice]);
@@ -110,12 +125,13 @@ export function useInventory() {
   const removeDevice = (
     deviceId: string,
     exitDate: Date,
-    reason: RemovalReason
+    reason: RemovalReason,
+    customerInfo: CustomerInfo
   ): void => {
     setDevices(prev =>
       prev.map(device =>
         device.id === deviceId
-          ? { ...device, exitDate, removalReason: reason }
+          ? { ...device, exitDate, removalReason: reason, customerInfo }
           : device
       )
     );
@@ -125,10 +141,14 @@ export function useInventory() {
     setDevices(prev =>
       prev.map(device =>
         device.id === deviceId
-          ? { ...device, exitDate: null, removalReason: null }
+          ? { ...device, exitDate: null, removalReason: null, customerInfo: null }
           : device
       )
     );
+  };
+
+  const getDevicesByRemovalReason = (reason: RemovalReason): Device[] => {
+    return devices.filter(device => device.removalReason === reason);
   };
 
   return {
@@ -138,5 +158,6 @@ export function useInventory() {
     addDevice,
     removeDevice,
     returnDevice,
+    getDevicesByRemovalReason,
   };
 }

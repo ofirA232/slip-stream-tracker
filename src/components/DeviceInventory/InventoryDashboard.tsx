@@ -8,6 +8,8 @@ import InventoryTable from "./InventoryTable";
 import DeviceDetails from "./DeviceDetails";
 import { useInventory } from "@/hooks/useInventory";
 import { Device } from "@/types/inventory";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const InventoryDashboard: React.FC = () => {
   const {
@@ -54,6 +56,33 @@ const InventoryDashboard: React.FC = () => {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Link to="/rented-devices">
+          <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
+            <div className="font-bold">מכשירים בהשכרה</div>
+            <div className="text-lg font-semibold text-blue-600">{stats.rentedDevices}</div>
+          </Button>
+        </Link>
+        <Link to="/loaned-devices">
+          <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
+            <div className="font-bold">מכשירים בהשאלה</div>
+            <div className="text-lg font-semibold text-green-600">{stats.loanedDevices}</div>
+          </Button>
+        </Link>
+        <Link to="/sold-devices">
+          <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
+            <div className="font-bold">מכשירים שנמכרו</div>
+            <div className="text-lg font-semibold text-purple-600">{stats.soldDevices}</div>
+          </Button>
+        </Link>
+        <Link to="/development-devices">
+          <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
+            <div className="font-bold">מכשירים לפיתוח</div>
+            <div className="text-lg font-semibold text-amber-600">{stats.developmentDevices}</div>
+          </Button>
+        </Link>
+      </div>
+
       <Tabs defaultValue="inventory" dir="rtl" className="w-full">
         <TabsList className="mb-4 w-full justify-start">
           <TabsTrigger value="inventory">מלאי</TabsTrigger>
@@ -64,7 +93,7 @@ const InventoryDashboard: React.FC = () => {
         <TabsContent value="inventory" className="space-y-4">
           <InventoryTable 
             devices={sortedDevices} 
-            onRemoveDevice={removeDevice}
+            onRemoveDevice={(deviceId, exitDate, reason, customerInfo) => removeDevice(deviceId, exitDate, reason, customerInfo)}
             onReturnDevice={returnDevice}
           />
         </TabsContent>

@@ -5,17 +5,33 @@ import { Button } from "@/components/ui/button";
 import { Package, PackagePlus, PackageX } from "lucide-react";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Device, RemovalReason } from "@/types/inventory";
+import { Device, RemovalReason, CustomerInfo } from "@/types/inventory";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 interface InventoryTableProps {
   devices: Device[];
-  onRemoveDevice: (deviceId: string, exitDate: Date, reason: RemovalReason) => void;
+  onRemoveDevice: (deviceId: string, exitDate: Date, reason: RemovalReason, customerInfo: CustomerInfo) => void;
   onReturnDevice: (deviceId: string) => void;
 }
+
+const removeDeviceSchema = z.object({
+  reason: z.enum(["rental", "loan", "sale", "development"] as const),
+  customerName: z.string().min(1, { message: "שם לקוח נדרש" }),
+  terminalId: z.string().min(1, { message: "מספר מסוף נדרש" }),
+  email: z.string().email({ message: "מייל לא תקין" }),
+  phone: z.string().min(9, { message: "מספר טלפון לא תקין" }),
+  accountCode: z.string().min(1, { message: "קוד הנה״ח נדרש" }),
+});
+
+type RemoveDeviceForm = z.infer<typeof removeDeviceSchema>;
 
 const InventoryTable: React.FC<InventoryTableProps> = ({ 
   devices, 
@@ -24,24 +40,43 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
 }) => {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [exitDate, setExitDate] = useState<Date>(new Date());
-  const [removalReason, setRemovalReason] = useState<RemovalReason>(null);
   const [isRemovalDialogOpen, setIsRemovalDialogOpen] = useState(false);
+
+  const form = useForm<RemoveDeviceForm>({
+    resolver: zodResolver(removeDeviceSchema),
+    defaultValues: {
+      reason: "rental",
+      customerName: "",
+      terminalId: "",
+      email: "",
+      phone: "",
+      accountCode: "",
+    },
+  });
 
   const handleRemoveClick = (device: Device) => {
     setSelectedDevice(device);
     setIsRemovalDialogOpen(true);
+    form.reset();
   };
 
-  const handleRemoveSubmit = () => {
-    if (!selectedDevice || !removalReason) {
-      toast.error("יש לבחור סיבת יציאה");
+  const handleRemoveSubmit = (data: RemoveDeviceForm) => {
+    if (!selectedDevice) {
+      toast.error("לא נבחר מכשיר");
       return;
     }
 
-    onRemoveDevice(selectedDevice.id, exitDate, removalReason);
+    const customerInfo: CustomerInfo = {
+      name: data.customerName,
+      terminalId: data.terminalId,
+      email: data.email,
+      phone: data.phone,
+      accountCode: data.accountCode,
+    };
+
+    onRemoveDevice(selectedDevice.id, exitDate, data.reason, customerInfo);
     toast.success("המכשיר נרשם כיצא מהמלאי");
     setIsRemovalDialogOpen(false);
-    setRemovalReason(null);
   };
 
   const handleReturnDevice = (device: Device) => {
@@ -126,43 +161,124 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             <DialogTitle className="text-right">הוצאת מכשיר מהמלאי</DialogTitle>
           </DialogHeader>
           
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="exitDate" className="text-right block">תאריך יציאה</Label>
-              <Calendar
-                id="exitDate"
-                mode="single"
-                selected={exitDate}
-                onSelect={(date) => date && setExitDate(date)}
-                className="rounded-md border mx-auto"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleRemoveSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="exitDate" className="text-right block">תאריך יציאה</Label>
+                <Calendar
+                  id="exitDate"
+                  mode="single"
+                  selected={exitDate}
+                  onSelect={(date) => date && setExitDate(date)}
+                  className="rounded-md border mx-auto"
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-right block">סיבת יציאה</FormLabel>
+                    <Select
+                      dir="rtl"
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full text-right">
+                          <SelectValue placeholder="בחר סיבת יציאה" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="rental">השכרה</SelectItem>
+                        <SelectItem value="loan">השאלה</SelectItem>
+                        <SelectItem value="sale">מכירה</SelectItem>
+                        <SelectItem value="development">פיתוח</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="reason" className="text-right block">סיבת יציאה</Label>
-              <Select
-                dir="rtl" 
-                value={removalReason || ""}
-                onValueChange={(value: RemovalReason) => setRemovalReason(value)}
-              >
-                <SelectTrigger className="w-full text-right">
-                  <SelectValue placeholder="בחר סיבת יציאה" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="rental">השכרה</SelectItem>
-                  <SelectItem value="loan">השאלה</SelectItem>
-                  <SelectItem value="sale">מכירה</SelectItem>
-                  <SelectItem value="development">פיתוח</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <div className="flex justify-end">
-            <Button type="button" onClick={handleRemoveSubmit}>
-              אישור
-            </Button>
-          </div>
+              <FormField
+                control={form.control}
+                name="customerName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-right block">שם לקוח</FormLabel>
+                    <FormControl>
+                      <Input dir="rtl" className="text-right" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="terminalId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-right block">מספר מסוף</FormLabel>
+                    <FormControl>
+                      <Input dir="rtl" className="text-right" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-right block">מייל לקוח</FormLabel>
+                    <FormControl>
+                      <Input dir="rtl" className="text-right" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-right block">מספר טלפון</FormLabel>
+                    <FormControl>
+                      <Input dir="rtl" className="text-right" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="accountCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-right block">קוד הנה״ח</FormLabel>
+                    <FormControl>
+                      <Input dir="rtl" className="text-right" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end">
+                <Button type="submit">
+                  אישור
+                </Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,6 +1,14 @@
 
 export type RemovalReason = "rental" | "loan" | "sale" | "development" | null;
 
+export interface CustomerInfo {
+  name: string;
+  terminalId: string;
+  email: string;
+  phone: string;
+  accountCode: string;
+}
+
 export interface Device {
   id: string;
   modelName: string;
@@ -8,6 +16,7 @@ export interface Device {
   entryDate: Date;
   exitDate: Date | null;
   removalReason: RemovalReason;
+  customerInfo: CustomerInfo | null;
 }
 
 export interface DeviceModel {
