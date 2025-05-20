@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
 
 interface AddDeviceFormProps {
@@ -15,23 +15,74 @@ interface AddDeviceFormProps {
 
 const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
   const [modelName, setModelName] = useState("");
-  const [serialNumber, setSerialNumber] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [serialNumbers, setSerialNumbers] = useState<string[]>([""]);
   const [entryDate, setEntryDate] = useState<Date | undefined>(new Date());
   const [isOpen, setIsOpen] = useState(false);
 
+  // Update serial numbers array when quantity changes
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuantity = parseInt(e.target.value, 10) || 1;
+    setQuantity(Math.max(1, newQuantity)); // Ensure at least 1 device
+    
+    // Update serial numbers array
+    setSerialNumbers(prev => {
+      const newSerialNumbers = [...prev];
+      
+      // If increasing quantity, add empty strings
+      if (newQuantity > prev.length) {
+        for (let i = prev.length; i < newQuantity; i++) {
+          newSerialNumbers.push("");
+        }
+      }
+      // If decreasing quantity, remove extra entries
+      else if (newQuantity < prev.length) {
+        return newSerialNumbers.slice(0, newQuantity);
+      }
+      
+      return newSerialNumbers;
+    });
+  };
+
+  // Update a specific serial number
+  const updateSerialNumber = (index: number, value: string) => {
+    const newSerialNumbers = [...serialNumbers];
+    newSerialNumbers[index] = value;
+    setSerialNumbers(newSerialNumbers);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!modelName || !serialNumber || !entryDate) {
-      toast.error("יש למלא את כל השדות");
+    if (!modelName || !entryDate) {
+      toast.error("יש למלא את שם הדגם ותאריך הכניסה");
       return;
     }
 
-    onAddDevice(modelName, serialNumber, entryDate);
-    toast.success("מכשיר נוסף בהצלחה");
+    // Check if all serial numbers are filled
+    const hasEmptySerialNumbers = serialNumbers.some(sn => !sn.trim());
+    if (hasEmptySerialNumbers) {
+      toast.error("יש למלא מספרים סידוריים לכל המכשירים");
+      return;
+    }
+
+    // Check for duplicate serial numbers
+    const uniqueSerialNumbers = new Set(serialNumbers);
+    if (uniqueSerialNumbers.size !== serialNumbers.length) {
+      toast.error("ישנם מספרים סידוריים כפולים, אנא תקן");
+      return;
+    }
+
+    // Add each device
+    serialNumbers.forEach(serialNumber => {
+      onAddDevice(modelName, serialNumber, entryDate);
+    });
+    
+    toast.success(`${quantity} מכשירים נוספו בהצלחה`);
     
     // Reset form
     setModelName("");
-    setSerialNumber("");
+    setQuantity(1);
+    setSerialNumbers([""]);
     setEntryDate(new Date());
   };
 
@@ -50,17 +101,34 @@ const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
           className="text-right"
         />
       </div>
-      
+
       <div className="space-y-2">
-        <Label htmlFor="serialNumber" className="text-right block">מספר סידורי</Label>
+        <Label htmlFor="quantity" className="text-right block">כמות</Label>
         <Input
-          id="serialNumber"
+          id="quantity"
           dir="rtl"
-          value={serialNumber}
-          onChange={(e) => setSerialNumber(e.target.value)}
-          placeholder="הזן מספר סידורי"
+          type="number"
+          min="1"
+          value={quantity}
+          onChange={handleQuantityChange}
+          placeholder="הזן כמות"
           className="text-right"
         />
+      </div>
+      
+      <div className="space-y-2">
+        <Label className="text-right block">מספרים סידוריים</Label>
+        {serialNumbers.map((serialNumber, index) => (
+          <div key={index} className="flex gap-2 items-center">
+            <Input
+              dir="rtl"
+              value={serialNumber}
+              onChange={(e) => updateSerialNumber(index, e.target.value)}
+              placeholder={`מספר סידורי למכשיר ${index + 1}`}
+              className="text-right"
+            />
+          </div>
+        ))}
       </div>
       
       <div className="space-y-2">
@@ -90,7 +158,7 @@ const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
         </Popover>
       </div>
       
-      <Button type="submit" className="w-full">הוסף מכשיר</Button>
+      <Button type="submit" className="w-full">הוסף מכשירים</Button>
     </form>
   );
 };
