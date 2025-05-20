@@ -10,7 +10,6 @@ import RentedDevices from "./pages/RentedDevices";
 import LoanedDevices from "./pages/LoanedDevices";
 import SoldDevices from "./pages/SoldDevices";
 import DevelopmentDevices from "./pages/DevelopmentDevices";
-import DevicesByModel from "./pages/DevicesByModel";
 
 const queryClient = new QueryClient();
 
@@ -26,7 +25,6 @@ const App = () => (
           <Route path="/loaned-devices" element={<LoanedDevices />} />
           <Route path="/sold-devices" element={<SoldDevices />} />
           <Route path="/development-devices" element={<DevelopmentDevices />} />
-          <Route path="/devices-by-model" element={<DevicesByModel />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
