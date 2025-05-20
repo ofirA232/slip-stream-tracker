@@ -1,17 +1,17 @@
-
 import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Package, PackagePlus, PackageX } from "lucide-react";
 import { format } from "date-fns";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Device, RemovalReason, CustomerInfo } from "@/types/inventory";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -29,18 +29,45 @@ const removeDeviceSchema = z.object({
   email: z.string().email({ message: "מייל לא תקין" }),
   phone: z.string().min(9, { message: "מספר טלפון לא תקין" }),
   accountCode: z.string().min(1, { message: "קוד הנה״ח נדרש" }),
+  selectedDeviceIds: z.array(z.string()).min(1, { message: "יש לבחור לפחות מכשיר אחד" }),
 });
 
 type RemoveDeviceForm = z.infer<typeof removeDeviceSchema>;
+
+interface GroupedDevice {
+  modelName: string;
+  devices: Device[];
+  availableCount: number;
+}
 
 const InventoryTable: React.FC<InventoryTableProps> = ({ 
   devices, 
   onRemoveDevice,
   onReturnDevice
 }) => {
-  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [exitDate, setExitDate] = useState<Date>(new Date());
   const [isRemovalDialogOpen, setIsRemovalDialogOpen] = useState(false);
+
+  // Group devices by model
+  const groupedDevices = devices.reduce<GroupedDevice[]>((acc, device) => {
+    const existingGroup = acc.find(group => group.modelName === device.modelName);
+    
+    if (existingGroup) {
+      existingGroup.devices.push(device);
+      if (device.exitDate === null) {
+        existingGroup.availableCount += 1;
+      }
+    } else {
+      acc.push({
+        modelName: device.modelName,
+        devices: [device],
+        availableCount: device.exitDate === null ? 1 : 0
+      });
+    }
+    
+    return acc;
+  }, []);
 
   const form = useForm<RemoveDeviceForm>({
     resolver: zodResolver(removeDeviceSchema),
@@ -51,18 +78,27 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
       email: "",
       phone: "",
       accountCode: "",
+      selectedDeviceIds: [],
     },
   });
 
-  const handleRemoveClick = (device: Device) => {
-    setSelectedDevice(device);
+  const handleRemoveClick = (modelName: string) => {
+    setSelectedModel(modelName);
     setIsRemovalDialogOpen(true);
-    form.reset();
+    form.reset({
+      reason: "rental",
+      customerName: "",
+      terminalId: "",
+      email: "",
+      phone: "",
+      accountCode: "",
+      selectedDeviceIds: [],
+    });
   };
 
   const handleRemoveSubmit = (data: RemoveDeviceForm) => {
-    if (!selectedDevice) {
-      toast.error("לא נבחר מכשיר");
+    if (!selectedModel || data.selectedDeviceIds.length === 0) {
+      toast.error("לא נבחרו מכשירים");
       return;
     }
 
@@ -74,8 +110,12 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
       accountCode: data.accountCode,
     };
 
-    onRemoveDevice(selectedDevice.id, exitDate, data.reason, customerInfo);
-    toast.success("המכשיר נרשם כיצא מהמלאי");
+    // Process each selected device
+    data.selectedDeviceIds.forEach(deviceId => {
+      onRemoveDevice(deviceId, exitDate, data.reason, customerInfo);
+    });
+    
+    toast.success(`${data.selectedDeviceIds.length} מכשירים נרשמו כיצאו מהמלאי`);
     setIsRemovalDialogOpen(false);
   };
 
@@ -84,45 +124,38 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     toast.success("המכשיר הוחזר למלאי");
   };
 
+  // Get available devices for the selected model
+  const availableDevices = selectedModel ? 
+    devices.filter(d => d.modelName === selectedModel && d.exitDate === null) : 
+    [];
+
   return (
     <div className="rounded-md border shadow">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="text-right">פעולות</TableHead>
-            <TableHead className="text-right">סיבת יציאה</TableHead>
-            <TableHead className="text-right">תאריך יציאה</TableHead>
-            <TableHead className="text-right">תאריך כניסה</TableHead>
-            <TableHead className="text-right">מספר סידורי</TableHead>
+            <TableHead className="text-right">מכשירים במלאי</TableHead>
+            <TableHead className="text-right">סה"כ מכשירים</TableHead>
             <TableHead className="text-right">דגם</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {devices.length === 0 ? (
+          {groupedDevices.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center p-4">
+              <TableCell colSpan={4} className="text-center p-4">
                 אין מכשירים במלאי. הוסף מכשיר חדש כדי להתחיל.
               </TableCell>
             </TableRow>
           ) : (
-            devices.map((device) => (
-              <TableRow key={device.id}>
+            groupedDevices.map((group) => (
+              <TableRow key={group.modelName}>
                 <TableCell>
-                  {device.exitDate ? (
+                  {group.availableCount > 0 && (
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handleReturnDevice(device)}
-                      className="flex items-center gap-1"
-                    >
-                      <PackagePlus size={16} />
-                      החזר למלאי
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleRemoveClick(device)}
+                      onClick={() => handleRemoveClick(group.modelName)}
                       className="flex items-center gap-1 text-destructive hover:bg-destructive/10"
                     >
                       <PackageX size={16} />
@@ -130,22 +163,13 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                     </Button>
                   )}
                 </TableCell>
-                <TableCell className="text-right">
-                  {device.removalReason ? 
-                    getReason(device.removalReason) : 
-                    <span className="text-green-600">במלאי</span>
-                  }
+                <TableCell className="text-right font-medium">
+                  <span className="text-green-600">{group.availableCount}</span>
                 </TableCell>
-                <TableCell className="text-right">
-                  {device.exitDate ? format(new Date(device.exitDate), "dd/MM/yyyy") : "-"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {format(new Date(device.entryDate), "dd/MM/yyyy")}
-                </TableCell>
-                <TableCell className="text-right">{device.serialNumber}</TableCell>
+                <TableCell className="text-right">{group.devices.length}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <span>{device.modelName}</span>
+                    <span>{group.modelName}</span>
                     <Package size={16} />
                   </div>
                 </TableCell>
@@ -159,6 +183,9 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
         <DialogContent className="sm:max-w-md" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right">הוצאת מכשיר מהמלאי</DialogTitle>
+            <DialogDescription className="text-right">
+              דגם: {selectedModel}
+            </DialogDescription>
           </DialogHeader>
           
           <Form {...form}>
@@ -202,6 +229,54 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                 )}
               />
 
+              <div className="space-y-3">
+                <Label className="text-right block">בחר מכשירים להוצאה מהמלאי</Label>
+                <div className="max-h-40 overflow-y-auto border rounded-md p-2">
+                  {availableDevices.length === 0 ? (
+                    <p className="text-center text-muted-foreground p-2">אין מכשירים זמינים מדגם זה</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {availableDevices.map((device) => (
+                        <FormField
+                          key={device.id}
+                          control={form.control}
+                          name="selectedDeviceIds"
+                          render={({ field }) => (
+                            <FormItem key={device.id} className="flex items-center space-x-1 space-x-reverse">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(device.id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      field.onChange([...field.value, device.id]);
+                                    } else {
+                                      field.onChange(
+                                        field.value?.filter((value) => value !== device.id)
+                                      );
+                                    }
+                                  }}
+                                />
+                              </FormControl>
+                              <div className="text-right flex-1">
+                                <span className="ml-2">{device.serialNumber}</span>
+                                <span className="text-muted-foreground text-xs block">
+                                  {format(new Date(device.entryDate), "dd/MM/yyyy")}
+                                </span>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {form.formState.errors.selectedDeviceIds && (
+                  <p className="text-sm font-medium text-destructive text-right">
+                    {form.formState.errors.selectedDeviceIds.message}
+                  </p>
+                )}
+              </div>
+
               <FormField
                 control={form.control}
                 name="customerName"
@@ -216,6 +291,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                 )}
               />
 
+              
               <FormField
                 control={form.control}
                 name="terminalId"

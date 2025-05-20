@@ -7,7 +7,6 @@ import AddDeviceForm from "./AddDeviceForm";
 import InventoryTable from "./InventoryTable";
 import DeviceDetails from "./DeviceDetails";
 import { useInventory } from "@/hooks/useInventory";
-import { Device } from "@/types/inventory";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -29,16 +28,6 @@ const InventoryDashboard: React.FC = () => {
       device.modelName.toLowerCase().includes(searchLower) ||
       device.serialNumber.toLowerCase().includes(searchLower)
     );
-  });
-  
-  // Sort devices to show available first, then by entry date (newest first)
-  const sortedDevices = [...filteredDevices].sort((a, b) => {
-    // First sort by availability
-    if (a.exitDate === null && b.exitDate !== null) return -1;
-    if (a.exitDate !== null && b.exitDate === null) return 1;
-    
-    // Then by entry date (newest first)
-    return new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime();
   });
 
   return (
@@ -92,7 +81,7 @@ const InventoryDashboard: React.FC = () => {
         
         <TabsContent value="inventory" className="space-y-4">
           <InventoryTable 
-            devices={sortedDevices} 
+            devices={filteredDevices} 
             onRemoveDevice={(deviceId, exitDate, reason, customerInfo) => removeDevice(deviceId, exitDate, reason, customerInfo)}
             onReturnDevice={returnDevice}
           />
