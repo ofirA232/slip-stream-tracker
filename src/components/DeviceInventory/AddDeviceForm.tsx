@@ -10,7 +10,7 @@ import { Calendar as CalendarIcon, Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
 
 interface AddDeviceFormProps {
-  onAddDevice: (modelName: string, serialNumber: string, entryDate: Date) => void;
+  onAddDevice: (modelName: string, serialNumber: string, entryDate: Date) => Promise<boolean>;
 }
 
 const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
@@ -19,6 +19,7 @@ const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
   const [serialNumbers, setSerialNumbers] = useState<string[]>([""]);
   const [entryDate, setEntryDate] = useState<Date | undefined>(new Date());
   const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Update serial numbers array when quantity changes
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +52,7 @@ const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
     setSerialNumbers(newSerialNumbers);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!modelName || !entryDate) {
       toast.error("יש למלא את שם הדגם ותאריך הכניסה");
@@ -72,18 +73,29 @@ const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
       return;
     }
 
-    // Add each device
-    serialNumbers.forEach(serialNumber => {
-      onAddDevice(modelName, serialNumber, entryDate);
-    });
-    
-    toast.success(`${quantity} מכשירים נוספו בהצלחה`);
-    
-    // Reset form
-    setModelName("");
-    setQuantity(1);
-    setSerialNumbers([""]);
-    setEntryDate(new Date());
+    setLoading(true);
+    try {
+      // Add each device
+      let successCount = 0;
+      for (const serialNumber of serialNumbers) {
+        const success = await onAddDevice(modelName, serialNumber, entryDate);
+        if (success) successCount++;
+      }
+      
+      if (successCount > 0) {
+        toast.success(`${successCount} מכשירים נוספו בהצלחה`);
+        
+        // Reset form
+        setModelName("");
+        setQuantity(1);
+        setSerialNumbers([""]);
+        setEntryDate(new Date());
+      }
+    } catch (error) {
+      console.error("Error adding devices:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -99,6 +111,7 @@ const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
           onChange={(e) => setModelName(e.target.value)}
           placeholder="הזן דגם מכשיר"
           className="text-right"
+          disabled={loading}
         />
       </div>
 
@@ -113,6 +126,7 @@ const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
           onChange={handleQuantityChange}
           placeholder="הזן כמות"
           className="text-right"
+          disabled={loading}
         />
       </div>
       
@@ -126,6 +140,7 @@ const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
               onChange={(e) => updateSerialNumber(index, e.target.value)}
               placeholder={`מספר סידורי למכשיר ${index + 1}`}
               className="text-right"
+              disabled={loading}
             />
           </div>
         ))}
@@ -139,6 +154,7 @@ const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
               id="entryDate"
               variant="outline"
               className="w-full justify-between text-right"
+              disabled={loading}
             >
               {entryDate ? format(entryDate, "dd/MM/yyyy") : "בחר תאריך"}
               <CalendarIcon className="h-4 w-4" />
@@ -158,7 +174,9 @@ const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onAddDevice }) => {
         </Popover>
       </div>
       
-      <Button type="submit" className="w-full">הוסף מכשירים</Button>
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? "מוסיף מכשירים..." : "הוסף מכשירים"}
+      </Button>
     </form>
   );
 };

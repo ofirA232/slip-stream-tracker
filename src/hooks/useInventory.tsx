@@ -1,55 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Device, DeviceModel, InventoryStats, RemovalReason, CustomerInfo } from "@/types/inventory";
-
-// Mock data for initial development
-const initialDevices: Device[] = [
-  {
-    id: "1",
-    modelName: "Verifone V240m",
-    serialNumber: "VF-12345",
-    entryDate: new Date(2023, 1, 15),
-    exitDate: null,
-    removalReason: null,
-    customerInfo: null
-  },
-  {
-    id: "2",
-    modelName: "PAX A920",
-    serialNumber: "PAX-67890",
-    entryDate: new Date(2023, 2, 10),
-    exitDate: new Date(2023, 5, 20),
-    removalReason: "rental",
-    customerInfo: {
-      name: "חברת אלפא",
-      terminalId: "TER-1234",
-      email: "alpha@example.com",
-      phone: "052-1234567",
-      accountCode: "ACC-001"
-    }
-  },
-  {
-    id: "3",
-    modelName: "Ingenico Move 5000",
-    serialNumber: "ING-54321",
-    entryDate: new Date(2023, 3, 5),
-    exitDate: new Date(2023, 7, 12),
-    removalReason: "sale",
-    customerInfo: {
-      name: "חברת ביטא",
-      terminalId: "TER-5678",
-      email: "beta@example.com",
-      phone: "053-7654321",
-      accountCode: "ACC-002"
-    }
-  },
-];
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function useInventory() {
-  const [devices, setDevices] = useState<Device[]>(() => {
-    const savedDevices = localStorage.getItem("inventoryDevices");
-    return savedDevices ? JSON.parse(savedDevices) : initialDevices;
-  });
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const [stats, setStats] = useState<InventoryStats>({
     totalDevices: 0,
@@ -60,11 +18,62 @@ export function useInventory() {
     developmentDevices: 0,
   });
 
-  // Save to localStorage whenever devices change
+  // Fetch devices from Supabase on component mount
   useEffect(() => {
-    localStorage.setItem("inventoryDevices", JSON.stringify(devices));
+    fetchDevices();
+  }, []);
+
+  // Calculate stats whenever devices change
+  useEffect(() => {
     calculateStats();
   }, [devices]);
+
+  // Fetch all devices from Supabase
+  const fetchDevices = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('devices')
+        .select(`
+          id,
+          serial_number,
+          entry_date,
+          exit_date,
+          removal_reason,
+          device_models(name),
+          customers(name, terminal_id, email, phone, account_code)
+        `);
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const formattedDevices: Device[] = data.map(item => ({
+          id: item.id,
+          modelName: item.device_models?.name || '',
+          serialNumber: item.serial_number,
+          entryDate: new Date(item.entry_date),
+          exitDate: item.exit_date ? new Date(item.exit_date) : null,
+          removalReason: item.removal_reason as RemovalReason,
+          customerInfo: item.customers ? {
+            name: item.customers.name,
+            terminalId: item.customers.terminal_id,
+            email: item.customers.email,
+            phone: item.customers.phone,
+            accountCode: item.customers.account_code
+          } : null
+        }));
+        
+        setDevices(formattedDevices);
+      }
+    } catch (error) {
+      console.error("Error fetching devices:", error);
+      toast.error("שגיאה בטעינת המכשירים");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const calculateStats = () => {
     const newStats: InventoryStats = {
@@ -78,73 +87,223 @@ export function useInventory() {
     setStats(newStats);
   };
 
-  const getDeviceModels = (): DeviceModel[] => {
-    const modelMap = new Map<string, { total: number, available: number }>();
-    
-    // Count devices by model
-    devices.forEach(device => {
-      if (!modelMap.has(device.modelName)) {
-        modelMap.set(device.modelName, { total: 0, available: 0 });
+  const getDeviceModels = async (): Promise<DeviceModel[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('device_models')
+        .select('id, name');
+      
+      if (error) {
+        throw error;
       }
       
-      const modelData = modelMap.get(device.modelName)!;
-      modelData.total += 1;
-      
-      if (!device.exitDate) {
-        modelData.available += 1;
+      if (data) {
+        // Get counts of devices by model
+        const models: DeviceModel[] = await Promise.all(
+          data.map(async (model) => {
+            // Get total count
+            const { count: totalCount, error: totalError } = await supabase
+              .from('devices')
+              .select('*', { count: 'exact', head: true })
+              .eq('model_id', model.id);
+
+            // Get available count
+            const { count: availableCount, error: availError } = await supabase
+              .from('devices')
+              .select('*', { count: 'exact', head: true })
+              .eq('model_id', model.id)
+              .is('exit_date', null);
+
+            if (totalError || availError) {
+              throw totalError || availError;
+            }
+
+            return {
+              id: model.id,
+              name: model.name,
+              totalCount: totalCount || 0,
+              availableCount: availableCount || 0,
+            };
+          })
+        );
+        
+        return models;
       }
-    });
-    
-    // Convert map to array of DeviceModel objects
-    return Array.from(modelMap.entries()).map(([name, counts]) => ({
-      id: name.toLowerCase().replace(/\s+/g, '-'),
-      name,
-      totalCount: counts.total,
-      availableCount: counts.available,
-    }));
+      
+      return [];
+    } catch (error) {
+      console.error("Error fetching device models:", error);
+      toast.error("שגיאה בטעינת דגמי המכשירים");
+      return [];
+    }
   };
 
-  const addDevice = (
+  const addDevice = async (
     modelName: string,
     serialNumber: string,
     entryDate: Date
-  ): void => {
-    const newDevice: Device = {
-      id: uuidv4(),
-      modelName,
-      serialNumber,
-      entryDate,
-      exitDate: null,
-      removalReason: null,
-      customerInfo: null
-    };
-    
-    setDevices(prev => [...prev, newDevice]);
+  ): Promise<boolean> => {
+    try {
+      // First, get or create the model
+      const { data: existingModels, error: modelError } = await supabase
+        .from('device_models')
+        .select('id')
+        .eq('name', modelName)
+        .limit(1);
+      
+      if (modelError) throw modelError;
+      
+      let modelId;
+      
+      if (existingModels && existingModels.length > 0) {
+        modelId = existingModels[0].id;
+      } else {
+        // Create new model if it doesn't exist
+        const { data: newModel, error: createModelError } = await supabase
+          .from('device_models')
+          .insert([{ name: modelName }])
+          .select('id')
+          .single();
+        
+        if (createModelError) throw createModelError;
+        modelId = newModel.id;
+      }
+      
+      // Now add the device
+      const { data, error } = await supabase
+        .from('devices')
+        .insert([{
+          model_id: modelId,
+          serial_number: serialNumber,
+          entry_date: entryDate.toISOString(),
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Add the new device to the state
+      const newDevice: Device = {
+        id: data.id,
+        modelName,
+        serialNumber,
+        entryDate,
+        exitDate: null,
+        removalReason: null,
+        customerInfo: null
+      };
+      
+      setDevices(prevDevices => [...prevDevices, newDevice]);
+      return true;
+    } catch (error: any) {
+      console.error("Error adding device:", error);
+      if (error.code === '23505') {
+        toast.error("המספר הסידורי כבר קיים במערכת");
+      } else {
+        toast.error("שגיאה בהוספת מכשיר");
+      }
+      return false;
+    }
   };
 
-  const removeDevice = (
+  const removeDevice = async (
     deviceId: string,
     exitDate: Date,
     reason: RemovalReason,
     customerInfo: CustomerInfo
-  ): void => {
-    setDevices(prev =>
-      prev.map(device =>
-        device.id === deviceId
-          ? { ...device, exitDate, removalReason: reason, customerInfo }
-          : device
-      )
-    );
+  ): Promise<boolean> => {
+    try {
+      // First, get or create the customer
+      let customerId;
+      
+      const { data: existingCustomers, error: customerError } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('name', customerInfo.name)
+        .eq('terminal_id', customerInfo.terminalId)
+        .eq('email', customerInfo.email)
+        .eq('phone', customerInfo.phone)
+        .eq('account_code', customerInfo.accountCode)
+        .limit(1);
+      
+      if (customerError) throw customerError;
+      
+      if (existingCustomers && existingCustomers.length > 0) {
+        customerId = existingCustomers[0].id;
+      } else {
+        // Create new customer if they don't exist
+        const { data: newCustomer, error: createCustomerError } = await supabase
+          .from('customers')
+          .insert([{
+            name: customerInfo.name,
+            terminal_id: customerInfo.terminalId,
+            email: customerInfo.email,
+            phone: customerInfo.phone,
+            account_code: customerInfo.accountCode
+          }])
+          .select('id')
+          .single();
+        
+        if (createCustomerError) throw createCustomerError;
+        customerId = newCustomer.id;
+      }
+      
+      // Now update the device
+      const { error } = await supabase
+        .from('devices')
+        .update({
+          exit_date: exitDate.toISOString(),
+          removal_reason: reason,
+          customer_id: customerId
+        })
+        .eq('id', deviceId);
+      
+      if (error) throw error;
+      
+      // Update state
+      setDevices(prev =>
+        prev.map(device =>
+          device.id === deviceId
+            ? { ...device, exitDate, removalReason: reason, customerInfo }
+            : device
+        )
+      );
+      
+      return true;
+    } catch (error) {
+      console.error("Error removing device:", error);
+      toast.error("שגיאה בעדכון מכשיר");
+      return false;
+    }
   };
 
-  const returnDevice = (deviceId: string): void => {
-    setDevices(prev =>
-      prev.map(device =>
-        device.id === deviceId
-          ? { ...device, exitDate: null, removalReason: null, customerInfo: null }
-          : device
-      )
-    );
+  const returnDevice = async (deviceId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('devices')
+        .update({
+          exit_date: null,
+          removal_reason: null,
+          customer_id: null
+        })
+        .eq('id', deviceId);
+      
+      if (error) throw error;
+      
+      setDevices(prev =>
+        prev.map(device =>
+          device.id === deviceId
+            ? { ...device, exitDate: null, removalReason: null, customerInfo: null }
+            : device
+        )
+      );
+      
+      return true;
+    } catch (error) {
+      console.error("Error returning device:", error);
+      toast.error("שגיאה בהחזרת מכשיר למלאי");
+      return false;
+    }
   };
 
   const getDevicesByRemovalReason = (reason: RemovalReason): Device[] => {
@@ -154,10 +313,12 @@ export function useInventory() {
   return {
     devices,
     stats,
+    loading,
     getDeviceModels,
     addDevice,
     removeDevice,
     returnDevice,
     getDevicesByRemovalReason,
+    refreshDevices: fetchDevices
   };
 }

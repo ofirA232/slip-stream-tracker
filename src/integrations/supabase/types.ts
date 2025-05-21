@@ -9,7 +9,108 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          account_code: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string
+          terminal_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_code: string
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          phone: string
+          terminal_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_code?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+          terminal_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      device_models: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      devices: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          entry_date: string
+          exit_date: string | null
+          id: string
+          model_id: string
+          removal_reason: Database["public"]["Enums"]["removal_reason"] | null
+          serial_number: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          entry_date?: string
+          exit_date?: string | null
+          id?: string
+          model_id: string
+          removal_reason?: Database["public"]["Enums"]["removal_reason"] | null
+          serial_number: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          entry_date?: string
+          exit_date?: string | null
+          id?: string
+          model_id?: string
+          removal_reason?: Database["public"]["Enums"]["removal_reason"] | null
+          serial_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devices_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "device_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +119,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      removal_reason: "rental" | "loan" | "sale" | "development"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +234,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      removal_reason: ["rental", "loan", "sale", "development"],
+    },
   },
 } as const
