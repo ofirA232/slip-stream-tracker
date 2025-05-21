@@ -5,44 +5,53 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PackagePlus, ArrowRight, ChevronsUpDown } from "lucide-react";
+import { Search, PackagePlus, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CustomerInfo } from "@/types/inventory";
 
 const LoanedDevices: React.FC = () => {
   const { devices, returnDevice } = useInventory();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
-  const [customerForReturn, setCustomerForReturn] = useState<string | null>(null);
+  const [customerKeyForReturn, setCustomerKeyForReturn] = useState<string | null>(null);
   
-  // Group devices by customer
+  // Create a unique key for each customer based on all their details
+  const createCustomerKey = (customerInfo: CustomerInfo): string => {
+    return `${customerInfo.name}|${customerInfo.terminalId}|${customerInfo.email}|${customerInfo.phone}|${customerInfo.accountCode}`;
+  };
+  
+  // Group devices by customer details (not just name)
   const devicesByCustomer = devices
     .filter(device => device.removalReason === "loan")
     .reduce((acc, device) => {
       if (!device.customerInfo) return acc;
       
-      const customerName = device.customerInfo.name;
-      if (!acc[customerName]) {
-        acc[customerName] = [];
+      const customerKey = createCustomerKey(device.customerInfo);
+      if (!acc[customerKey]) {
+        acc[customerKey] = {
+          info: device.customerInfo,
+          devices: []
+        };
       }
       
       // Add to filter check
       if (searchTerm === "" || 
           device.modelName.toLowerCase().includes(searchTerm.toLowerCase()) ||
           device.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          customerName.toLowerCase().includes(searchTerm.toLowerCase())) {
-        acc[customerName].push(device);
+          device.customerInfo.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+        acc[customerKey].devices.push(device);
       }
       
       return acc;
-    }, {} as Record<string, typeof devices>);
+    }, {} as Record<string, { info: CustomerInfo, devices: typeof devices }>);
   
-  const handleOpenReturnDialog = (customerName: string) => {
-    setCustomerForReturn(customerName);
+  const handleOpenReturnDialog = (customerKey: string) => {
+    setCustomerKeyForReturn(customerKey);
     setSelectedDeviceIds([]);
     setIsReturnDialogOpen(true);
   };
@@ -90,24 +99,22 @@ const LoanedDevices: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        Object.entries(devicesByCustomer).map(([customerName, customerDevices]) => (
-          <Card key={customerName} className="mb-6">
+        Object.entries(devicesByCustomer).map(([customerKey, { info, devices: customerDevices }]) => (
+          <Card key={customerKey} className="mb-6">
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="flex items-start flex-col">
-                <CardTitle className="text-right">{customerName}</CardTitle>
+                <CardTitle className="text-right">{info.name}</CardTitle>
                 <div className="text-sm text-muted-foreground">
-                  {customerDevices.length > 0 && customerDevices[0].customerInfo && (
-                    <>
-                      <div>מספר מסוף: {customerDevices[0].customerInfo.terminalId}</div>
-                      <div>טלפון: {customerDevices[0].customerInfo.phone}</div>
-                    </>
-                  )}
+                  <div>מספר מסוף: {info.terminalId}</div>
+                  <div>טלפון: {info.phone}</div>
+                  <div>מייל: {info.email}</div>
+                  <div>קוד הנה״ח: {info.accountCode}</div>
                 </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleOpenReturnDialog(customerName)}
+                onClick={() => handleOpenReturnDialog(customerKey)}
                 className="flex items-center gap-1"
               >
                 <PackagePlus size={16} />
@@ -149,8 +156,8 @@ const LoanedDevices: React.FC = () => {
           <div className="py-4">
             <h3 className="mb-2 font-semibold">בחר מכשירים להחזרה:</h3>
             <div className="max-h-60 overflow-y-auto border rounded-md p-3 space-y-2">
-              {customerForReturn && devicesByCustomer[customerForReturn] ? 
-                devicesByCustomer[customerForReturn].map(device => (
+              {customerKeyForReturn && devicesByCustomer[customerKeyForReturn] ? 
+                devicesByCustomer[customerKeyForReturn].devices.map(device => (
                   <div key={device.id} className="flex items-center space-x-2 space-x-reverse">
                     <Checkbox 
                       id={`device-${device.id}`} 
