@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Device, DeviceModel, InventoryStats, RemovalReason, CustomerInfo } from "@/types/inventory";
@@ -89,50 +88,42 @@ export function useInventory() {
 
   const getDeviceModels = async (): Promise<DeviceModel[]> => {
     try {
-      const { data, error } = await supabase
+      console.log("Fetching device models...");
+      
+      // Get all device models
+      const { data: modelsData, error: modelsError } = await supabase
         .from('device_models')
         .select('id, name');
       
-      if (error) {
-        throw error;
+      if (modelsError) {
+        console.error("Error fetching models:", modelsError);
+        throw modelsError;
       }
       
-      if (data) {
-        // Get counts of devices by model
-        const models: DeviceModel[] = await Promise.all(
-          data.map(async (model) => {
-            // Get total count
-            const { count: totalCount, error: totalError } = await supabase
-              .from('devices')
-              .select('*', { count: 'exact', head: true })
-              .eq('model_id', model.id);
-
-            // Get available count
-            const { count: availableCount, error: availError } = await supabase
-              .from('devices')
-              .select('*', { count: 'exact', head: true })
-              .eq('model_id', model.id)
-              .is('exit_date', null);
-
-            if (totalError || availError) {
-              throw totalError || availError;
-            }
-
-            return {
-              id: model.id,
-              name: model.name,
-              totalCount: totalCount || 0,
-              availableCount: availableCount || 0,
-            };
-          })
-        );
+      if (!modelsData || modelsData.length === 0) {
+        console.log("No models found");
+        return [];
+      }
+      
+      console.log("Found models:", modelsData);
+      
+      // Calculate counts for each model using the devices already in state
+      const models: DeviceModel[] = modelsData.map(model => {
+        const modelDevices = devices.filter(device => device.modelName === model.name);
+        const availableCount = modelDevices.filter(device => device.exitDate === null).length;
         
-        return models;
-      }
+        return {
+          id: model.id,
+          name: model.name,
+          totalCount: modelDevices.length,
+          availableCount: availableCount,
+        };
+      });
       
-      return [];
+      console.log("Calculated model counts:", models);
+      return models;
     } catch (error) {
-      console.error("Error fetching device models:", error);
+      console.error("Error in getDeviceModels:", error);
       toast.error("שגיאה בטעינת דגמי המכשירים");
       return [];
     }
