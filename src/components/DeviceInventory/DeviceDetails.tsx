@@ -31,8 +31,13 @@ const DeviceDetails: React.FC<DeviceDetailsProps> = ({ stats, models }) => {
         value={stats.soldDevices}
         colorClass="bg-purple-100"
       />
+      <StatsCard 
+        title="מכשירים לפיתוח" 
+        value={stats.developmentDevices}
+        colorClass="bg-orange-100"
+      />
       
-      <div className="md:col-span-2 lg:col-span-4">
+      <div className="md:col-span-2 lg:col-span-5">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-right">דגמי מכשירים במלאי</CardTitle>
