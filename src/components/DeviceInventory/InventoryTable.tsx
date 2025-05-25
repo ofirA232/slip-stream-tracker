@@ -26,7 +26,7 @@ const removeDeviceSchema = z.object({
   reason: z.enum(["rental", "loan", "sale", "development"] as const),
   customerName: z.string().min(1, { message: "שם לקוח נדרש" }),
   terminalId: z.string().min(1, { message: "מספר מסוף נדרש" }),
-  email: z.string().email({ message: "מייל לא תקין" }),
+  invoiceNumber: z.string().min(1, { message: "מספר חשבונית נדרש" }),
   phone: z.string().min(9, { message: "מספר טלפון לא תקין" }),
   accountCode: z.string().min(1, { message: "קוד הנה״ח נדרש" }),
   selectedDeviceIds: z.array(z.string()).min(1, { message: "יש לבחור לפחות מכשיר אחד" }),
@@ -75,7 +75,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
       reason: "rental",
       customerName: "",
       terminalId: "",
-      email: "",
+      invoiceNumber: "",
       phone: "",
       accountCode: "",
       selectedDeviceIds: [],
@@ -89,7 +89,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
       reason: "rental",
       customerName: "",
       terminalId: "",
-      email: "",
+      invoiceNumber: "",
       phone: "",
       accountCode: "",
       selectedDeviceIds: [],
@@ -105,7 +105,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     const customerInfo: CustomerInfo = {
       name: data.customerName,
       terminalId: data.terminalId,
-      email: data.email,
+      email: data.invoiceNumber, // Using the email field to store invoice number for now
       phone: data.phone,
       accountCode: data.accountCode,
     };
@@ -308,10 +308,10 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
 
               <FormField
                 control={form.control}
-                name="email"
+                name="invoiceNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-right block">מייל לקוח</FormLabel>
+                    <FormLabel className="text-right block">מספר חשבונית</FormLabel>
                     <FormControl>
                       <Input dir="rtl" className="text-right" {...field} />
                     </FormControl>
