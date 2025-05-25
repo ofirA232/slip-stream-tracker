@@ -48,7 +48,7 @@ const DeviceDetails: React.FC<DeviceDetailsProps> = ({ stats, models }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {models.length === 0 ? (
+                  {!models || models.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="text-center py-4">
                         אין דגמים להצגה

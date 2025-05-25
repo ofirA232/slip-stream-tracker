@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -9,6 +9,7 @@ import DeviceDetails from "./DeviceDetails";
 import { useInventory } from "@/hooks/useInventory";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { DeviceModel } from "@/types/inventory";
 
 const InventoryDashboard: React.FC = () => {
   const {
@@ -21,6 +22,7 @@ const InventoryDashboard: React.FC = () => {
   } = useInventory();
   
   const [searchTerm, setSearchTerm] = useState("");
+  const [models, setModels] = useState<DeviceModel[]>([]);
   
   const filteredDevices = devices.filter((device) => {
     const searchLower = searchTerm.toLowerCase();
@@ -29,6 +31,16 @@ const InventoryDashboard: React.FC = () => {
       device.serialNumber.toLowerCase().includes(searchLower)
     );
   });
+
+  // Fetch models when component mounts
+  useEffect(() => {
+    const fetchModels = async () => {
+      const deviceModels = await getDeviceModels();
+      setModels(deviceModels);
+    };
+    
+    fetchModels();
+  }, [getDeviceModels]);
 
   return (
     <div className="container mx-auto p-4">
@@ -94,7 +106,7 @@ const InventoryDashboard: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="dashboard">
-          <DeviceDetails stats={stats} models={getDeviceModels()} />
+          <DeviceDetails stats={stats} models={models} />
         </TabsContent>
       </Tabs>
     </div>
