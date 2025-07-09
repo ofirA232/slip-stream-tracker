@@ -2,6 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeviceModel, InventoryStats } from "@/types/inventory";
+import { Link } from "react-router-dom";
 
 interface DeviceDetailsProps {
   stats: InventoryStats;
@@ -13,36 +14,44 @@ const DeviceDetails: React.FC<DeviceDetailsProps> = ({ stats, models }) => {
     <div className="space-y-6">
       {/* Grid of colored stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatsCard 
-          title="מסופונים בהשכרה" 
-          value={stats.rentedDevices} 
-          bgColor="bg-red-500"
-          textColor="text-white"
-        />
-        <StatsCard 
-          title="מסופונים שנמכרו" 
-          value={stats.soldDevices}
-          bgColor="bg-green-500"
-          textColor="text-white"
-        />
+        <Link to="/rented-devices">
+          <StatsCard 
+            title="מסופונים בהשכרה" 
+            value={stats.rentedDevices} 
+            bgColor="bg-red-500"
+            textColor="text-white"
+          />
+        </Link>
+        <Link to="/sold-devices">
+          <StatsCard 
+            title="מסופונים שנמכרו" 
+            value={stats.soldDevices}
+            bgColor="bg-green-500"
+            textColor="text-white"
+          />
+        </Link>
         <StatsCard 
           title="סה״כ מסופונים" 
           value={stats.totalDevices}
           bgColor="bg-blue-900"
           textColor="text-white"
         />
-        <StatsCard 
-          title="מסופונים לפיתוח" 
-          value={stats.developmentDevices}
-          bgColor="bg-purple-500"
-          textColor="text-white"
-        />
-        <StatsCard 
-          title="מסופונים בהשאלה" 
-          value={stats.loanedDevices}
-          bgColor="bg-pink-500"
-          textColor="text-white"
-        />
+        <Link to="/development-devices">
+          <StatsCard 
+            title="מסופונים לפיתוח" 
+            value={stats.developmentDevices}
+            bgColor="bg-purple-500"
+            textColor="text-white"
+          />
+        </Link>
+        <Link to="/loaned-devices">
+          <StatsCard 
+            title="מסופונים בהשאלה" 
+            value={stats.loanedDevices}
+            bgColor="bg-pink-500"
+            textColor="text-white"
+          />
+        </Link>
         <StatsCard 
           title="מסופונים במלאי" 
           value={stats.availableDevices}
@@ -103,7 +112,7 @@ interface StatsCardProps {
 
 const StatsCard: React.FC<StatsCardProps> = ({ title, value, bgColor, textColor }) => {
   return (
-    <div className={`${bgColor} ${textColor} rounded-lg p-4 shadow-sm`}>
+    <div className={`${bgColor} ${textColor} rounded-lg p-4 shadow-sm hover:scale-105 transition-transform cursor-pointer`}>
       <div className="text-sm font-medium mb-1 text-right">{title}</div>
       <div className="text-3xl font-bold text-right">{value}</div>
     </div>
