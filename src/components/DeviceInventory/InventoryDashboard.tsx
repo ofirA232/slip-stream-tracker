@@ -57,39 +57,35 @@ const InventoryDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      {/* Navigation buttons */}
+      <div className="flex gap-2 mb-6 justify-end">
         <Link to="/rented-devices">
-          <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
-            <div className="font-bold">מכשירים בהשכרה</div>
-            <div className="text-lg font-semibold text-blue-600">{stats.rentedDevices}</div>
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <span>מסופונים בהשכרה</span>
           </Button>
         </Link>
         <Link to="/loaned-devices">
-          <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
-            <div className="font-bold">מכשירים בהשאלה</div>
-            <div className="text-lg font-semibold text-green-600">{stats.loanedDevices}</div>
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <span>מלאי מסופונים</span>
           </Button>
         </Link>
         <Link to="/sold-devices">
-          <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
-            <div className="font-bold">מכשירים שנמכרו</div>
-            <div className="text-lg font-semibold text-purple-600">{stats.soldDevices}</div>
-          </Button>
-        </Link>
-        <Link to="/development-devices">
-          <Button variant="outline" className="w-full h-full py-4 flex flex-col items-center justify-center">
-            <div className="font-bold">מכשירים לפיתוח</div>
-            <div className="text-lg font-semibold text-amber-600">{stats.developmentDevices}</div>
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <span>רמת מלאי כללי</span>
           </Button>
         </Link>
       </div>
 
-      <Tabs defaultValue="inventory" dir="rtl" className="w-full">
+      <Tabs defaultValue="dashboard" dir="rtl" className="w-full">
         <TabsList className="mb-4 w-full justify-start">
+          <TabsTrigger value="dashboard">לוח מחוונים</TabsTrigger>
           <TabsTrigger value="inventory">מלאי</TabsTrigger>
           <TabsTrigger value="add">הוספת מכשיר</TabsTrigger>
-          <TabsTrigger value="dashboard">לוח מחוונים</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="dashboard">
+          <DeviceDetails stats={stats} models={models} />
+        </TabsContent>
         
         <TabsContent value="inventory" className="space-y-4">
           <InventoryTable 
@@ -103,10 +99,6 @@ const InventoryDashboard: React.FC = () => {
           <div className="max-w-md mx-auto">
             <AddDeviceForm onAddDevice={addDevice} />
           </div>
-        </TabsContent>
-        
-        <TabsContent value="dashboard">
-          <DeviceDetails stats={stats} models={models} />
         </TabsContent>
       </Tabs>
     </div>
