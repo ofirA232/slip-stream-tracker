@@ -76,7 +76,7 @@ const InventoryDashboard: React.FC = () => {
         </Link>
       </div>
 
-      <Tabs defaultValue="dashboard" dir="rtl" className="w-full">
+      <Tabs defaultValue="dashboard" dir="ltr" className="w-full">
         <TabsList className="mb-4 w-full justify-start">
           <TabsTrigger value="dashboard">לוח מחוונים</TabsTrigger>
           <TabsTrigger value="inventory">מלאי</TabsTrigger>
