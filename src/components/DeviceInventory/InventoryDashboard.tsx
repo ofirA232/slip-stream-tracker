@@ -58,7 +58,7 @@ const InventoryDashboard: React.FC = () => {
       </div>
 
       {/* Navigation buttons */}
-      <div className="flex gap-2 mb-6 justify-end">
+      <div className="flex gap-2 mb-6 justify-start">
         <Link to="/rented-devices">
           <Button variant="outline" size="sm" className="flex items-center gap-2">
             <span>מסופונים בהשכרה</span>
