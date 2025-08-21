@@ -52,14 +52,6 @@ const DeviceDetails: React.FC<DeviceDetailsProps> = ({ stats, models }) => {
             textColor="text-white"
           />
         </Link>
-        <Link to="/">
-          <StatsCard 
-            title="מסופונים במלאי" 
-            value={stats.availableDevices}
-            bgColor="bg-cyan-400"
-            textColor="text-white"
-          />
-        </Link>
       </div>
       
       {/* Models table */}
