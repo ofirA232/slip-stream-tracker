@@ -14,6 +14,14 @@ const DeviceDetails: React.FC<DeviceDetailsProps> = ({ stats, models }) => {
     <div className="space-y-6">
       {/* Grid of colored stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <Link to="/">
+          <StatsCard 
+            title="מסופונים במלאי" 
+            value={stats.availableDevices}
+            bgColor="bg-cyan-400"
+            textColor="text-white"
+          />
+        </Link>
         <Link to="/rented-devices">
           <StatsCard 
             title="מסופונים בהשכרה" 
@@ -43,14 +51,6 @@ const DeviceDetails: React.FC<DeviceDetailsProps> = ({ stats, models }) => {
             title="מסופונים בהשאלה" 
             value={stats.loanedDevices}
             bgColor="bg-pink-500"
-            textColor="text-white"
-          />
-        </Link>
-        <Link to="/">
-          <StatsCard 
-            title="מסופונים במלאי" 
-            value={stats.availableDevices}
-            bgColor="bg-cyan-400"
             textColor="text-white"
           />
         </Link>
