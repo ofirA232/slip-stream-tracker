@@ -10,6 +10,7 @@ import RentedDevices from "./pages/RentedDevices";
 import LoanedDevices from "./pages/LoanedDevices";
 import SoldDevices from "./pages/SoldDevices";
 import DevelopmentDevices from "./pages/DevelopmentDevices";
+import InventoryTablePage from "./pages/InventoryTablePage";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/loaned-devices" element={<LoanedDevices />} />
           <Route path="/sold-devices" element={<SoldDevices />} />
           <Route path="/development-devices" element={<DevelopmentDevices />} />
+          <Route path="/inventory-table" element={<InventoryTablePage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

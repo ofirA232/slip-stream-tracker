@@ -30,7 +30,7 @@ const DeviceDetails: React.FC<DeviceDetailsProps> = ({ stats, models }) => {
             textColor="text-white"
           />
         </Link>
-        <Link to="/">
+        <Link to="/inventory-table">
           <StatsCard 
             title="מסופונים במלאי" 
             value={stats.availableDevices}
